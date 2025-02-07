@@ -180,7 +180,7 @@ func (r *Client[P, S]) Next(ctx context.Context, queue string, num_jobs uint32) 
 			var jobs []*Job[P, S]
 			err := json.NewDecoder(resp.Body).Decode(&jobs)
 			if err != nil {
-				if errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF) {
+				if errors.Is(err, io.ErrUnexpectedEOF) {
 					// connection must have been disrupted, continue to retrieve, the Job IF lost will
 					// be retried.
 					continue
