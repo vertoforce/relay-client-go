@@ -2,6 +2,7 @@ package relay
 
 import (
 	"context"
+	"database/sql"
 	"math/rand"
 	"os"
 	"strconv"
@@ -10,6 +11,9 @@ import (
 
 	"github.com/go-playground/errors/v5"
 	"github.com/stretchr/testify/require"
+
+	// Import the postgres driver
+	_ "github.com/lib/pq"
 )
 
 var (
@@ -179,4 +183,29 @@ func TestEnqueueMultiple(t *testing.T) {
 	j2.Job().UpdatedAt = nil // set server side by server
 	assert.Equal(*j1.Job(), job1)
 	assert.Equal(*j2.Job(), job2)
+}
+
+func TestMalformedBody(t *testing.T) {
+	assert := require.New(t)
+	ctx := context.Background()
+
+	type Job struct {
+		Num int
+	}
+
+	client, err := New[Job, any](Config{
+		BaseURL: baseURL,
+	})
+	assert.NoError(err)
+
+	pg, err := sql.Open("postgres", os.Getenv("DATABASE_URL"))
+	assert.NoError(err)
+
+	// Insert job with malformed body in to the DB manually
+	// This will cause the client to fail to decode the body
+	_, err = pg.ExecContext(ctx, `INSERT INTO jobs (id, queue, data, timeout, max_retries, retries_remaining, updated_at, created_at, run_at) VALUES ('1', '1', '{"Num": "string"}', '00:00:30', -1, -1, now(), now(), now())`)
+	assert.NoError(err)
+
+	_, err = client.Next(ctx, "1", 1)
+	assert.Error(err)
 }
