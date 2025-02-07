@@ -180,9 +180,14 @@ func (r *Client[P, S]) Next(ctx context.Context, queue string, num_jobs uint32) 
 			var jobs []*Job[P, S]
 			err := json.NewDecoder(resp.Body).Decode(&jobs)
 			if err != nil {
-				// connection must have been disrupted, continue to retrieve, the Job IF lost will
-				// be retried.
-				continue
+				if errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF) {
+					// connection must have been disrupted, continue to retrieve, the Job IF lost will
+					// be retried.
+					continue
+				}
+
+				// Bad payload
+				return nil, errors.Wrap(err, "failed to decode job, malformed payload")
 			}
 
 			helpers := make([]*JobHelper[P, S], 0, len(jobs))
