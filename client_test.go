@@ -191,7 +191,6 @@ func TestMalformedBody(t *testing.T) {
 
 	// Insert job with malformed body in to the DB manually
 	// This will cause the client to fail to decode the body
-	// Create new client with different job type
 	type Job2 struct{ Num string }
 	client2, err := New[Job2, any](Config{BaseURL: baseURL})
 	assert.NoError(err)
